@@ -31,6 +31,7 @@
 
 #if defined(USE_HAL_DRIVER) & defined(STM32F407xx)
   #include "stm32f4xx_hal.h"
+  #include "time.h"
 #elif defined(USE_HAL_DRIVER) & defined(STM32F1xx)
   #include "stm32f1xx_hal.h"
 #elif defined(USE_STDPERIPH_DRIVER) & defined(STM32F10X_CL)
@@ -59,8 +60,14 @@ typedef enum { FALSE, TRUE }bool;
 
 /* Exported functions --------------------------------------------------------*/
 void RTC_Config(void);
+#if defined(USE_STDPERIPH_DRIVER) & defined(STM32F10X_CL)
 void RTC_IRQHandler(void);
+#elif defined(USE_HAL_DRIVER) & defined(STM32F407xx)
+void RTC_WKUP_IRQHandler(void);
+#endif
 void RTC_SetTime(uint_least8_t *TimeData);
+uint32_t RTC_GetUnixTime(void);
+
 
 #if defined(RTC_USE_LSE) & defined(RTC_USE_HSE)
 #error "Choose only one clock source for RTC"
