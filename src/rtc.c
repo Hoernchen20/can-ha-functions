@@ -180,11 +180,13 @@ void RTC_Config(void) {
 #endif
 #if defined(USE_HAL_DRIVER) & defined(STM32F407xx)
 
-
+#if 0
   HAL_NVIC_SetPriority(RTC_IRQn, RTC_IRQ_PRE_PRIORITY, RTC_IRQ_SUB_PRIORITY);
   HAL_NVIC_EnableIRQ(RTC_IRQn);
   HAL_RTCEx_SetWakeUpTimer_IT(&RtcHandle, 1, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
-#endif
+#endif /* 0 */
+
+  #endif
 }
 
 /**
