@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file    hvac.h
  * @author  Felix Horn
  * @version 0.1
@@ -41,12 +41,26 @@
 #endif
 
 /* Exported constants --------------------------------------------------------*/
+#define MAX_AGE_MEASURED_VALUE
+#define HYSTERESE
+//frostgrenze
+
 /* Exported variables --------------------------------------------------------*/
 /* Exported types ------------------------------------------------------------*/
 #ifndef BOOL
 #define BOOL
 typedef enum { FALSE, TRUE }bool;
 #endif
+
+typedef struct {
+    int_least16_t   MeasuredValue;
+    int_least16_t   ActualValue;
+    uint_least32_t  Timestamp_ActualValue;
+    bool            WindowContact;
+    bool            Heating;
+    //heizen trotz fenster auf
+    bool            AblaufIstwert //translate
+} Heating_HandleTypeDef;
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
