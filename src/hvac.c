@@ -31,7 +31,7 @@
 /**                                                                  **/
 /**********************************************************************/
 /* Includes ----------------------------------------------------------*/
-#include "hvac.h"
+#include "../inc/hvac.h"
 #include <stdint.h>
 
 /* Private typedef ---------------------------------------------------*/
@@ -55,10 +55,10 @@
 /* Private define ----------------------------------------------------*/
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
-Heating_TypeDef hHeating[NUM_HEATING_CHANNELS];
+Heating_HandleTypeDef hHeating[NUM_HEATING_CHANNELS];
 
 /* Private function prototypes ---------------------------------------*/
-static void Heating_Function(Heating_TypeDef *p);
+static void Heating_Function(Heating_HandleTypeDef *p);
 
 /* Private functions -------------------------------------------------*/
 /**
@@ -68,7 +68,7 @@ static void Heating_Function(Heating_TypeDef *p);
   */
 void Heating_Handler(void) {
     for ( uint_fast8_t i = 0; i < NUM_HEATING_CHANNELS; i++) {
-        Heating_Function(hHeating[i-1]);
+        Heating_Function(&hHeating[i]);
     }
 }
 
@@ -78,8 +78,31 @@ void Heating_Handler(void) {
   *               channel.
   * @retval None
   */
-static void Heating_Function(Heating_TypeDef *p) {
+static void Heating_Function(Heating_HandleTypeDef *p) {
     
+}
+
+/**
+  * @brief  Write the measured actual value into heating struct.
+  * @param  hhtd: Pointer to the handle struct of the specific heating 
+  *               channel.
+  * @param  Value: Actual value (fix point 10,00°C = 1000).
+  * @retval None
+  */
+void Heating_Put_ActualValue(Heating_HandleTypeDef *hhtd, int_least16_t Value) {
+    hhtd->ActualValue = Value;
+    hhtd->Timestamp_ActualValue_IsToOld = RTC_GetUnixTime + MAX_AGE_MEASURED_VALUE;
+}
+
+/**
+  * @brief  Write the setpoint into heating struct.
+  * @param  hhtd: Pointer to the handle struct of the specific heating 
+  *               channel.
+  * @param  Value: Setpoint (fix point 10,00°C = 1000).
+  * @retval None
+  */
+void Heating_Put_SetPoint(Heating_HandleTypeDef *hhtd, int_least16_t Value) {
+    hhtd->SetPoint = Value;
 }
 
 /**********************************************************************/
