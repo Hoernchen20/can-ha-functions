@@ -91,17 +91,32 @@ void Heating_Handler(void) {
   * @retval None
   */
 static void Heating_Function(Heating_HandleTypeDef *hhtd) {
-    /* Decrease time values */
-    Lifetime_ActualValue--;
-    BlockingTime_WindowContact--;
+    bool HeatingState;
     
     /* Manipulate set point with outside temperature */
     if (OutsideTemperature > 1000) {
         hhtd->CalculateSetPoint =
-            hhtd->SetPoint - (OutsideTemperature - 1000) / 4;
+            hhtd->SetPoint - (OutsideTemperature - 1000) / 4; /* check if division with shift right is smaller */
     }
     
+    /* Decrease time values and check blocking time of window contact */
+    if (Lifetime_ActualValue > 0) { /* check if != 0 is smaller */
+        Lifetime_ActualValue--;
+    }
     
+    if (BlockingTime_WindowContact > 0) { /* check if != 0 is smaller */
+        BlockingTime_WindowContact--;
+        HeatingState = FALSE;
+    } else {
+        if (hhtd->WindowContact) {
+            /* heat if temperature is to low */
+        } else {
+            /* check if temperature is under freezing level then heat */
+        }
+    }
+    
+    /* Save temporary state */
+    hhtd->Heating = HeatingState;
 }
 
 /**
@@ -138,6 +153,8 @@ void Heating_Put_WindowContact(Heating_HandleTypeDef *hhtd, bool State) {
     hhtd->WindowContact = State;
     if (State) {
         hhtd->BlockingTime_WindowContact = BLOCKING_TIME_WINDOW;
+    } else {
+        hhtd->BlockingTime_WindowContact = 0;
     }
 }
 
