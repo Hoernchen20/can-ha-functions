@@ -95,23 +95,37 @@ static void Heating_Function(Heating_HandleTypeDef *hhtd) {
     
     /* Manipulate set point with outside temperature */
     if (OutsideTemperature > 1000) {
-        hhtd->CalculateSetPoint =
-            hhtd->SetPoint - (OutsideTemperature - 1000) / 4; /* check if division with shift right is smaller */
+        hhtd->CalculateSetPoint = (int_least16_t)(
+            hhtd->SetPoint - (OutsideTemperature - 1000) / 4); /* check if division with shift right is smaller */
+    } else {
+        hhtd->CalculateSetPoint = hhtd->SetPoint;
     }
     
     /* Decrease time values and check blocking time of window contact */
-    if (Lifetime_ActualValue > 0) { /* check if != 0 is smaller */
-        Lifetime_ActualValue--;
+    if (hhtd->Lifetime_ActualValue > 0) {
+        hhtd->Lifetime_ActualValue--;
     }
     
-    if (BlockingTime_WindowContact > 0) { /* check if != 0 is smaller */
-        BlockingTime_WindowContact--;
+    if (hhtd->BlockingTime_WindowContact > 0) {
+        hhtd->BlockingTime_WindowContact--;
         HeatingState = FALSE;
     } else {
         if (hhtd->WindowContact) {
-            /* heat if temperature is to low */
-        } else {
             /* check if temperature is under freezing level then heat */
+            if (hhtd->ActualValue < FREEZING_LEVEL) {
+                HeatingState = TRUE;
+                hhtd->Heating_FreezingLevel = TRUE;
+            } else {
+                HeatingState = FALSE;
+                hhtd->Heating_FreezingLevel = FALSE;
+            }
+        } else {
+            /* heat if temperature is to low */
+            if (hhtd->ActualValue < (hhtd->CalculateSetPoint - HYSTERESE)) {
+                HeatingState = TRUE;
+            } else {
+                HeatingState = FALSE;
+            }
         }
     }
     
@@ -143,18 +157,18 @@ void Heating_Put_SetPoint(Heating_HandleTypeDef *hhtd, int_least16_t Value) {
 }
 
 /**
-  * @brief  Set or unset the window contact int heating struct.
+  * @brief  Set or unset the window contact in heating struct.
   * @param  hhtd: Pointer to the handle struct of the specific heating 
   *               channel.
-  * @param  State: State of window contact (0 = window is open).
+  * @param  State: State of window contact (FALSE = window is closed).
   * @retval None
   */
 void Heating_Put_WindowContact(Heating_HandleTypeDef *hhtd, bool State) {
     hhtd->WindowContact = State;
     if (State) {
-        hhtd->BlockingTime_WindowContact = BLOCKING_TIME_WINDOW;
-    } else {
         hhtd->BlockingTime_WindowContact = 0;
+    } else {
+        hhtd->BlockingTime_WindowContact = BLOCKING_TIME_WINDOW;
     }
 }
 
