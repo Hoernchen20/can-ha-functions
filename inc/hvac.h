@@ -55,7 +55,8 @@ typedef enum { FALSE, TRUE }bool;
 /* Includes ----------------------------------------------------------*/
 /* Exported constants ------------------------------------------------*/
 #define NUM_HEATING_CHANNELS    1
-#define MAX_AGE_MEASURED_VALUE  1800  /** in seconds */
+#define LIFETIME_MEASURED_VALUE 300   /** in seconds */
+#define BLOCKING_TIME_WINDOW    300   /** in seconds */
 #define HYSTERESE               20    /** fix point 10,00°C = 1000) */
 #define FREEZING_LEVEL          1000  /** fix point 10,00°C = 1000) */
 
@@ -65,22 +66,22 @@ typedef struct {
     /* Input */
     int_least16_t   ActualValue; /** fix point 10,00°C = 1000) */
     int_least16_t   SetPoint;    /** fix point 10,00°C = 1000) */
-    bool            WindowContact;
+    bool            WindowContact; /** 0 = Window is open */
 
     /* Output */
     bool            Heating;
-    bool            ActuealValue_IsToOld;
+    bool            ActualValue_IsOld;
     bool            Heating_FreezingLevel; /* Heating dispite the window
-                                           * is open and the temprature
-                                           * is unter the freezing
-                                           * level */
+                                            * is open and the temprature
+                                            * is unter the freezing
+                                            * level */
+    int_least16_t   CalculateSetPoint;
 
     /* Config */
     
     /* Private */
-    uint32_t  Timestamp_ActualValue_IsToOld; /* After this time
-                                                    * the actual value
-                                                    * is to old */
+    uint_least16_t  Lifetime_ActualValue;
+    uint_least16_t  BlockingTime_WindowContact;
 } Heating_HandleTypeDef;
 
 /* Exported macro ----------------------------------------------------*/
@@ -88,6 +89,7 @@ typedef struct {
 void Heating_Handler(void);
 void Heating_Put_ActualValue(Heating_HandleTypeDef *hhtd, int_least16_t Value);
 void Heating_Put_SetPoint(Heating_HandleTypeDef *hhtd, int_least16_t Value);
+void Heating_Put_WindowContact(Heating_HandleTypeDef *hhtd, bool State);
 
 /**********************************************************************/
 /**                                                                  **/
