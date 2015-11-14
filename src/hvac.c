@@ -56,7 +56,7 @@
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
 uint32_t Timestamp_OldHandling;
-int16_t OutsideTemperature;
+int16_t OutsideTemperature = 1500;
 Heating_HandleTypeDef hHeating[NUM_HEATING_CHANNELS];
 
 /* Private function prototypes ---------------------------------------*/
@@ -115,7 +115,8 @@ static void Heating_Function(Heating_HandleTypeDef *hhtd) {
             if (hhtd->ActualValue < FREEZING_LEVEL) {
                 HeatingState = TRUE;
                 hhtd->Heating_FreezingLevel = TRUE;
-            } else {
+            }
+            if (hhtd->ActualValue > FREEZING_LEVEL + HYSTERESE){
                 HeatingState = FALSE;
                 hhtd->Heating_FreezingLevel = FALSE;
             }
@@ -123,7 +124,8 @@ static void Heating_Function(Heating_HandleTypeDef *hhtd) {
             /* heat if temperature is to low */
             if (hhtd->ActualValue < (hhtd->CalculateSetPoint - HYSTERESE)) {
                 HeatingState = TRUE;
-            } else {
+            }
+            if (hhtd->ActualValue > (hhtd->CalculateSetPoint + HYSTERESE)){
                 HeatingState = FALSE;
             }
         }
