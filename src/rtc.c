@@ -26,6 +26,8 @@
 
 #include <rtc.h>
 #include <stdint-gcc.h>
+
+#if defined(USE_HAL_DRIVER) & defined(STM32F407xx)
 #include <stm32f407xx.h>
 #include <stm32f4xx.h>
 #include <stm32f4xx_hal_cortex.h>
@@ -34,6 +36,7 @@
 #include <stm32f4xx_hal_rcc_ex.h>
 #include <stm32f4xx_hal_rtc.h>
 #include <stm32f4xx_hal_rtc_ex.h>
+#endif
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
