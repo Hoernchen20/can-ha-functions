@@ -60,13 +60,12 @@ typedef enum { FALSE, TRUE }bool;
 #define HYSTERESE               20    /** fix point 10,00°C = 1000) */
 #define FREEZING_LEVEL          1000  /** fix point 10,00°C = 1000) */
 
-/* Exported variables ------------------------------------------------*/
 /* Exported types ----------------------------------------------------*/
 typedef struct {
     /* Input */
     int_least16_t   ActualValue; /** fix point 10,00°C = 1000) */
     int_least16_t   SetPoint;    /** fix point 10,00°C = 1000) */
-    bool            WindowContact; /** 0 = Window is open */
+    bool            WindowContact; /** FALSE = window is closed */
 
     /* Output */
     bool            Heating;
@@ -83,6 +82,10 @@ typedef struct {
     uint_least16_t  Lifetime_ActualValue;
     uint_least16_t  BlockingTime_WindowContact;
 } Heating_HandleTypeDef;
+
+/* Exported variables ------------------------------------------------*/
+extern int16_t OutsideTemperature;
+extern Heating_HandleTypeDef hHeating[NUM_HEATING_CHANNELS];
 
 /* Exported macro ----------------------------------------------------*/
 /* Exported functions ------------------------------------------------*/
