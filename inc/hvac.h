@@ -35,15 +35,12 @@
 /**                                                                  **/
 /**********************************************************************/
 /* Includes ----------------------------------------------------------*/
-#include "rtc.h"
+#include <stdint.h>
+#include <stdbool.h>
+
 /* Exported constants ------------------------------------------------*/
 /* Exported variables ------------------------------------------------*/
 /* Exported types ----------------------------------------------------*/
-#ifndef BOOL
-#define BOOL
-typedef enum { FALSE, TRUE }bool;
-#endif
-
 /* Exported macro ----------------------------------------------------*/
 /* Exported functions ------------------------------------------------*/
 
@@ -54,45 +51,35 @@ typedef enum { FALSE, TRUE }bool;
 /**********************************************************************/
 /* Includes ----------------------------------------------------------*/
 /* Exported constants ------------------------------------------------*/
-#define NUM_HEATING_CHANNELS    1
-#define LIFETIME_MEASURED_VALUE 300   /** in seconds */
+#define LIFETIME_ACTUAL_VALUE   300   /** in seconds */
 #define BLOCKING_TIME_WINDOW    300   /** in seconds */
 #define HYSTERESE               20    /** fix point 10,00°C = 1000) */
 #define FREEZING_LEVEL          1000  /** fix point 10,00°C = 1000) */
 
+/* Channel 1 */
+#define CH1_STD_ACTUALVALUE         2000
+#define CH1_STD_SETPOINT            2000
+#define CH1_STD_CALCULATESETPOINT   1500
+
 /* Exported types ----------------------------------------------------*/
-typedef struct {
-    /* Input */
-    int_least16_t   ActualValue; /** fix point 10,00°C = 1000) */
-    int_least16_t   SetPoint;    /** fix point 10,00°C = 1000) */
-    bool            WindowContact; /** FALSE = window is closed */
+typedef enum {
+    Channel1,
 
-    /* Output */
-    bool            Heating;
-    bool            ActualValue_IsOld;
-    bool            Heating_FreezingLevel; /* Heating dispite the window
-                                            * is open and the temprature
-                                            * is unter the freezing
-                                            * level */
-    int_least16_t   CalculateSetPoint;
-
-    /* Config */
-    
-    /* Private */
-    uint_least16_t  Lifetime_ActualValue;
-    uint_least16_t  BlockingTime_WindowContact;
-} Heating_HandleTypeDef;
+    /* Don't remove this */
+    NumberHeatingChannels
+}HeatingChannel;
 
 /* Exported variables ------------------------------------------------*/
-extern int16_t OutsideTemperature;
-extern Heating_HandleTypeDef hHeating[NUM_HEATING_CHANNELS];
+extern volatile int16_t OutsideTemperature;
 
 /* Exported macro ----------------------------------------------------*/
 /* Exported functions ------------------------------------------------*/
+void Heating_Init(void);
 void Heating_Handler(void);
-void Heating_Put_ActualValue(Heating_HandleTypeDef *hhtd, int_least16_t Value);
-void Heating_Put_SetPoint(Heating_HandleTypeDef *hhtd, int_least16_t Value);
-void Heating_Put_WindowContact(Heating_HandleTypeDef *hhtd, bool State);
+void Heating_Put_ActualValue(HeatingChannel Channel, int_least16_t Value);
+void Heating_Put_SetPoint(HeatingChannel Channel, int_least16_t Value);
+void Heating_Put_WindowContact(HeatingChannel Channel, bool State);
+int_least16_t Heating_GetCalculateSetPoint(HeatingChannel Channel);
 
 /**********************************************************************/
 /**                                                                  **/
