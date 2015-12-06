@@ -70,7 +70,7 @@ typedef enum {
 }HeatingChannel;
 
 /* Exported variables ------------------------------------------------*/
-extern volatile int16_t OutsideTemperature;
+extern int16_t OutsideTemperature;
 
 /* Exported macro ----------------------------------------------------*/
 /* Exported functions ------------------------------------------------*/
@@ -80,6 +80,10 @@ void Heating_Put_ActualValue(HeatingChannel Channel, int_least16_t Value);
 void Heating_Put_SetPoint(HeatingChannel Channel, int_least16_t Value);
 void Heating_Put_WindowContact(HeatingChannel Channel, bool State);
 int_least16_t Heating_GetCalculateSetPoint(HeatingChannel Channel);
+bool Heating_GetHeatingState(HeatingChannel Channel);
+bool Heating_IsActualValueOld(HeatingChannel Channel);
+bool Heating_GetWindowContact(HeatingChannel Channel);
+bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel);
 
 /**********************************************************************/
 /**                                                                  **/

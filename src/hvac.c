@@ -77,7 +77,7 @@ struct {
 /* Private define ----------------------------------------------------*/
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
-volatile int16_t OutsideTemperature = 1500;
+int16_t OutsideTemperature = 1500;
 
 /* Private function prototypes ---------------------------------------*/
 static void Heating_Function(HeatingChannel Channel);
@@ -201,6 +201,22 @@ void Heating_Put_WindowContact(HeatingChannel Channel, bool State) {
 
 int_least16_t Heating_GetCalculateSetPoint(HeatingChannel Channel) {
     return hHeating[Channel].CalculateSetPoint;
+}
+
+bool Heating_GetHeatingState(HeatingChannel Channel) {
+    return hHeating[Channel].Heating;
+}
+
+bool Heating_IsActualValueOld(HeatingChannel Channel) {
+    return hHeating[Channel].ActualValue_IsOld;
+}
+
+bool Heating_GetWindowContact(HeatingChannel Channel) {
+    return hHeating[Channel].WindowContact;
+}
+
+bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel) {
+    return hHeating[Channel].Heating_FreezingLevel;
 }
 
 /**********************************************************************/
