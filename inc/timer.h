@@ -34,9 +34,16 @@
 #include <stdbool.h>
 
 /* Exported constants ------------------------------------------------*/
+#define TIMER_ENTRIES 10
+
 /* Exported variables ------------------------------------------------*/
 /* Exported types ----------------------------------------------------*/
 /* Exported macro ----------------------------------------------------*/
+#define CALC_MINUTES(h, m) h * 60 + m
+
 /* Exported functions ------------------------------------------------*/
+void InitTimer(uint_least16_t Minutes);
+void HandleTimer(void);
+void SetTimerMinutes(uint_least16_t Minutes);
 
 #endif /* TIMER_H_ */

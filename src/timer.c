@@ -3,8 +3,7 @@
  * @author  Felix Horn
  * @version 0.1
  * @date    12-Dec-2015
- * @brief   This file contains functions for heating, ventilation
- *          and air condition.
+ * @brief   This file contains functions for a weekly timer.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,11 +31,43 @@
 /* Private define ----------------------------------------------------*/
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
+struct {
+    uint_least16_t Minute;
+    uint_least8_t  OnDays;
+    void *         Function;
+    bool           WorkThrough;
+    bool           FunctionComplete;
+} TimerData[TIMER_ENTRIES];
+uint_least16_t Minutes;
+
 /* Private function prototypes ---------------------------------------*/
 /* Private functions -------------------------------------------------*/
 
 /**
-  * @brief  None.
+  * @brief  Initialize data struct of timer and set minute variable.
+  * @param  Minutes: Actual time in minutes.
+  * @retval None
+  */
+void InitTimer(uint_least16_t Minutes) {
+    SetTimerMinutes(Minutes);
+}
+
+
+/**
+  * @brief  Handles Timer. Should start every minute.
   * @param  None
   * @retval None
   */
+void HandleTimer(void) {
+}
+
+
+/**
+  * @brief  Set global minute variable to actual time.
+  * @param  Minutes: Actual time in minutes.
+  * @retval None
+  */
+void SetTimerMinutes(uint_least16_t Minutes) {
+
+}
+
