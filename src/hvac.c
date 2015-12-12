@@ -116,8 +116,6 @@ void Heating_Handler(void) {
   * @retval None
   */
 static void Heating_Function(HeatingChannel Channel) {
-    bool HeatingState;
-
     /* Manipulate set point with outside temperature */
     if (OutsideTemperature > 1000) {
         hHeating[Channel].CalculateSetPoint = (int_least16_t)(
@@ -133,31 +131,29 @@ static void Heating_Function(HeatingChannel Channel) {
     
     if (hHeating[Channel].BlockingTime_WindowContact > 0) {
         hHeating[Channel].BlockingTime_WindowContact--;
-        HeatingState = false;
+        hHeating[Channel].Heating = false;
+        hHeating[Channel].Heating_FreezingLevel = false;
     } else {
         if (hHeating[Channel].WindowContact) {
             /* check if temperature is under freezing level then heat */
             if (hHeating[Channel].ActualValue < FREEZING_LEVEL) {
-                HeatingState = true;
+                hHeating[Channel].Heating = true;
                 hHeating[Channel].Heating_FreezingLevel = true;
             }
             if (hHeating[Channel].ActualValue > FREEZING_LEVEL + HYSTERESE){
-                HeatingState = false;
+                hHeating[Channel].Heating = false;
                 hHeating[Channel].Heating_FreezingLevel = false;
             }
         } else {
             /* heat if temperature is to low */
             if (hHeating[Channel].ActualValue < (hHeating[Channel].CalculateSetPoint - HYSTERESE)) {
-                HeatingState = true;
+                hHeating[Channel].Heating = true;
             }
             if (hHeating[Channel].ActualValue > (hHeating[Channel].CalculateSetPoint + HYSTERESE)){
-                HeatingState = false;
+                hHeating[Channel].Heating = false;
             }
         }
     }
-    
-    /* Save temporary state */
-    hHeating[Channel].Heating = HeatingState;
 }
 
 /**
