@@ -69,16 +69,26 @@ typedef enum {
     NumberHeatingChannels
 }HeatingChannel;
 
+typedef enum {
+    Sunday    = 0b00000001,
+    Monday    = 0b00000010,
+    Tuesday   = 0b00000100,
+    Wednesday = 0b00001000,
+    Thursday  = 0b00010000,
+    Friday    = 0b00100000,
+    Saturday  = 0b01000000,
+    AllDays   = 0b10000000
+}WeekdayTypeDef;
+
 typedef struct {
     uint_least16_t Minute;
-//    uint_least8_t  OnDays; not used yet
+    WeekdayTypeDef Weekdays;
     HeatingChannel Channel;
     int_least16_t  SetPoint;
-} TimerData_TypeDef;
+} HeatingTimerDataTypeDef;
 
 /* Exported variables ------------------------------------------------*/
 extern int16_t OutsideTemperature;
-extern TimerData_TypeDef TimerData[];
 
 /* Exported macro ----------------------------------------------------*/
 #define CALC_MINUTES(h, m) h * 60 + m
@@ -95,8 +105,9 @@ bool Heating_IsActualValueOld(HeatingChannel Channel);
 bool Heating_GetWindowContact(HeatingChannel Channel);
 bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel);
 
-void HandleTimer(void);
-bool SetTimerMinutes(uint_least16_t Minutes);
+void Heating_Timer(HeatingTimerDataTypeDef *pTimerData, uint_fast8_t Size);
+bool SetTimerMinutes(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek);
+void Heating_IncTimer(void);
 
 /**********************************************************************/
 /**                                                                  **/

@@ -78,10 +78,12 @@ struct {
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
 int16_t OutsideTemperature = 1000;
-uint_least16_t TimerMinutes;
+static uint_least16_t TimerMinutes;
+static WeekdayTypeDef TimerDays;
 
 /* Private function prototypes ---------------------------------------*/
 static void Heating_Function(HeatingChannel Channel);
+bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData);
 
 /* Private functions -------------------------------------------------*/
 void Heating_Init(void) {
@@ -107,14 +109,6 @@ void Heating_Handler(void) {
     /* Work off every channel */
     for ( uint_fast8_t i = 0; i < NumberHeatingChannels; i++) {
         Heating_Function(i);
-    }
-
-    static uint_least8_t seconds = 0;
-    seconds++;
-
-    if (seconds >= 60) {
-        seconds = 0;
-        HandleTimer();
     }
 }
 
@@ -225,22 +219,27 @@ bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel) {
 }
 
 /**
-  * @brief  Handles Timer. Should start every minute.
+  * @brief  Handles Timer.
   * @param  None
   * @retval None
   */
-void HandleTimer(void) {
-    for (uint_fast8_t i = 0; i < 3; i++) {
-        if (TimerData[i].Minute == TimerMinutes) {
-            Heating_Put_SetPoint(TimerData[i].Channel, TimerData[i].SetPoint);
+void Heating_Timer(HeatingTimerDataTypeDef *pTimerData, uint_fast8_t Size) {
+    for (uint_fast8_t i = 0; i < Size; i++) {
+        if ( Heating_TimerMatch(&pTimerData[i]) ) {
+            Heating_Put_SetPoint(pTimerData[i].Channel, pTimerData[i].SetPoint);
         }
-    }
-    TimerMinutes++;
-    if (TimerMinutes >= 1440) {
-        TimerMinutes = 0;
     }
 }
 
+bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData) {
+    if ( (pTimerData->Minute == TimerMinutes) && (
+            (pTimerData->Weekdays & TimerDays) ||
+            (pTimerData->Weekdays == AllDays) ) ) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 /**
   * @brief  Set global minute variable to actual time.
@@ -248,13 +247,53 @@ void HandleTimer(void) {
   * @retval true = change timer minutes succesful
   *         false = change timer minute failed
   */
-bool SetTimerMinutes(uint_least16_t Minutes) {
+bool SetTimerMinutes(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek) {
     /* Check input data */
     if (Minutes > 1440) {
         return false;
     } else {
         TimerMinutes = Minutes;
+        TimerDays = DayOfWeek;
         return true;
+    }
+}
+
+/**
+  * @brief  Increas timer value. Should start every second.
+  * @param  None
+  * @retval None
+  */
+void Heating_IncTimer(void) {
+    static uint_least8_t seconds = 0;
+    seconds++;
+
+    if (seconds >= 60) {
+        seconds = 0;
+
+        TimerMinutes++;
+        if (TimerMinutes >= 1440) {
+            TimerMinutes = 0;
+
+            /* next day */
+            switch(TimerDays) {
+                case Sunday:    TimerDays = Monday;
+                                break;
+                case Monday:    TimerDays = Tuesday;
+                                break;
+                case Tuesday:   TimerDays = Wednesday;
+                                break;
+                case Wednesday: TimerDays = Thursday;
+                                break;
+                case Thursday:  TimerDays = Friday;
+                                break;
+                case Friday:    TimerDays = Saturday;
+                                break;
+                case Saturday:  TimerDays = Sunday;
+                                break;
+                case AllDays:   TimerDays = Sunday;
+                                break;
+            }
+        }
     }
 }
 
