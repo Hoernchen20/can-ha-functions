@@ -53,7 +53,7 @@
 /* Exported constants ------------------------------------------------*/
 #define LIFETIME_ACTUAL_VALUE   300   /** in seconds */
 #define BLOCKING_TIME_WINDOW    300   /** in seconds */
-#define HYSTERESE               20    /** fix point 10,00°C = 1000) */
+#define HYSTERESE               15    /** fix point 10,00°C = 1000) */
 #define FREEZING_LEVEL          1000  /** fix point 10,00°C = 1000) */
 
 /* Channel 1 */
@@ -69,10 +69,20 @@ typedef enum {
     NumberHeatingChannels
 }HeatingChannel;
 
+typedef struct {
+    uint_least16_t Minute;
+//    uint_least8_t  OnDays; not used yet
+    HeatingChannel Channel;
+    int_least16_t  SetPoint;
+} TimerData_TypeDef;
+
 /* Exported variables ------------------------------------------------*/
 extern int16_t OutsideTemperature;
+extern TimerData_TypeDef TimerData[];
 
 /* Exported macro ----------------------------------------------------*/
+#define CALC_MINUTES(h, m) h * 60 + m
+
 /* Exported functions ------------------------------------------------*/
 void Heating_Init(void);
 void Heating_Handler(void);
@@ -84,6 +94,9 @@ bool Heating_GetHeatingState(HeatingChannel Channel);
 bool Heating_IsActualValueOld(HeatingChannel Channel);
 bool Heating_GetWindowContact(HeatingChannel Channel);
 bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel);
+
+void HandleTimer(void);
+bool SetTimerMinutes(uint_least16_t Minutes);
 
 /**********************************************************************/
 /**                                                                  **/

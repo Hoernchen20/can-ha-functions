@@ -77,7 +77,8 @@ struct {
 /* Private define ----------------------------------------------------*/
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
-int16_t OutsideTemperature = 1500;
+int16_t OutsideTemperature = 1000;
+uint_least16_t TimerMinutes;
 
 /* Private function prototypes ---------------------------------------*/
 static void Heating_Function(HeatingChannel Channel);
@@ -98,7 +99,7 @@ void Heating_Init(void) {
 }
 
 /**
-  * @brief  Handles all heating channels.
+  * @brief  Handles all heating channels. Should start every second.
   * @param  None
   * @retval None
   */
@@ -106,6 +107,14 @@ void Heating_Handler(void) {
     /* Work off every channel */
     for ( uint_fast8_t i = 0; i < NumberHeatingChannels; i++) {
         Heating_Function(i);
+    }
+
+    static uint_least8_t seconds = 0;
+    seconds++;
+
+    if (seconds >= 60) {
+        seconds = 0;
+        HandleTimer();
     }
 }
 
@@ -213,6 +222,40 @@ bool Heating_GetWindowContact(HeatingChannel Channel) {
 
 bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel) {
     return hHeating[Channel].Heating_FreezingLevel;
+}
+
+/**
+  * @brief  Handles Timer. Should start every minute.
+  * @param  None
+  * @retval None
+  */
+void HandleTimer(void) {
+    for (uint_fast8_t i = 0; i < 3; i++) {
+        if (TimerData[i].Minute == TimerMinutes) {
+            Heating_Put_SetPoint(TimerData[i].Channel, TimerData[i].SetPoint);
+        }
+    }
+    TimerMinutes++;
+    if (TimerMinutes >= 1440) {
+        TimerMinutes = 0;
+    }
+}
+
+
+/**
+  * @brief  Set global minute variable to actual time.
+  * @param  Minutes: Actual time in minutes.
+  * @retval true = change timer minutes succesful
+  *         false = change timer minute failed
+  */
+bool SetTimerMinutes(uint_least16_t Minutes) {
+    /* Check input data */
+    if (Minutes > 1440) {
+        return false;
+    } else {
+        TimerMinutes = Minutes;
+        return true;
+    }
 }
 
 /**********************************************************************/
