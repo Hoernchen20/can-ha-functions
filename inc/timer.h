@@ -34,16 +34,25 @@
 #include <stdbool.h>
 
 /* Exported constants ------------------------------------------------*/
-#define TIMER_ENTRIES 10
+/* Exported types ----------------------------------------------------*/
+typedef void (*FunctionPtr) uint_least32_t;
 
 /* Exported variables ------------------------------------------------*/
-/* Exported types ----------------------------------------------------*/
+typedef struct {
+    uint_least16_t Minute;
+    uint_least8_t  OnDays;
+    FunctionPtr    Function;
+    uint_least32_t Data;
+    bool           WorkThrough;
+    bool           FunctionComplete;
+} TimerData;
+
 /* Exported macro ----------------------------------------------------*/
 #define CALC_MINUTES(h, m) h * 60 + m
 
 /* Exported functions ------------------------------------------------*/
 void InitTimer(uint_least16_t Minutes);
 void HandleTimer(void);
-void SetTimerMinutes(uint_least16_t Minutes);
+bool SetTimerMinutes(uint_least16_t Minutes);
 
 #endif /* TIMER_H_ */
