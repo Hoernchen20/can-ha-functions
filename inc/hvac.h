@@ -70,14 +70,14 @@ typedef enum {
 }HeatingChannel;
 
 typedef enum {
-    Sunday    = 0b00000001,
-    Monday    = 0b00000010,
-    Tuesday   = 0b00000100,
-    Wednesday = 0b00001000,
-    Thursday  = 0b00010000,
-    Friday    = 0b00100000,
-    Saturday  = 0b01000000,
-    AllDays   = 0b10000000
+    Sunday    = (1<<0),
+    Monday    = (1<<1),
+    Tuesday   = (1<<2),
+    Wednesday = (1<<3),
+    Thursday  = (1<<4),
+    Friday    = (1<<5),
+    Saturday  = (1<<6),
+    AllDays   = (0b01111111)
 }WeekdayTypeDef;
 
 typedef struct {
@@ -106,7 +106,7 @@ bool Heating_GetWindowContact(HeatingChannel Channel);
 bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel);
 
 void Heating_Timer(HeatingTimerDataTypeDef *pTimerData, uint_fast8_t Size);
-bool SetTimerMinutes(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek);
+bool Heating_SetTimer(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek);
 void Heating_IncTimer(void);
 
 /**********************************************************************/

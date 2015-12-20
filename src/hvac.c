@@ -60,7 +60,7 @@ struct {
 
     /* Output */
     bool            Heating;
-    bool            ActualValue_IsOld;
+    bool            ActualValue_IsOld;     // true = is old
     bool            Heating_FreezingLevel; /* Heating dispite the window
                                             * is open and the temprature
                                             * is unter the freezing
@@ -83,7 +83,9 @@ static WeekdayTypeDef TimerDays;
 
 /* Private function prototypes ---------------------------------------*/
 static void Heating_Function(HeatingChannel Channel);
-bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData);
+static bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData);
+static void Heating_ManipulateSetPoint(HeatingChannel Channel);
+static void Heating_DecreaseLifetime_ActualValue(HeatingChannel Channel);
 
 /* Private functions -------------------------------------------------*/
 void Heating_Init(void) {
@@ -119,18 +121,8 @@ void Heating_Handler(void) {
   * @retval None
   */
 static void Heating_Function(HeatingChannel Channel) {
-    /* Manipulate set point with outside temperature */
-    if (OutsideTemperature > 1000) {
-        hHeating[Channel].CalculateSetPoint = (int_least16_t)(
-                hHeating[Channel].SetPoint - (OutsideTemperature - 1000) / 4); /* check if division with shift right is smaller */
-    } else {
-        hHeating[Channel].CalculateSetPoint = hHeating[Channel].SetPoint;
-    }
-    
-    /* Decrease time values and check blocking time of window contact */
-    if (hHeating[Channel].Lifetime_ActualValue > 0) {
-        hHeating[Channel].Lifetime_ActualValue--;
-    }
+    Heating_ManipulateSetPoint(Channel);
+    Heating_DecreaseLifetime_ActualValue(Channel);
     
     if (hHeating[Channel].BlockingTime_WindowContact > 0) {
         hHeating[Channel].BlockingTime_WindowContact--;
@@ -156,6 +148,26 @@ static void Heating_Function(HeatingChannel Channel) {
                 hHeating[Channel].Heating = false;
             }
         }
+    }
+}
+
+static void Heating_ManipulateSetPoint(HeatingChannel Channel) {
+    /* Manipulate set point with outside temperature */
+    if (OutsideTemperature > 1000) {
+        hHeating[Channel].CalculateSetPoint =
+                (int_least16_t) (hHeating[Channel].SetPoint
+                        - (OutsideTemperature - 1000) / 4); /* check if division with shift right is smaller */
+    } else {
+        hHeating[Channel].CalculateSetPoint = hHeating[Channel].SetPoint;
+    }
+}
+
+static void Heating_DecreaseLifetime_ActualValue(HeatingChannel Channel) {
+    if (hHeating[Channel].Lifetime_ActualValue > 0) {
+        hHeating[Channel].Lifetime_ActualValue--;
+        hHeating[Channel].ActualValue_IsOld = false;
+    } else {
+        hHeating[Channel].ActualValue_IsOld = true;
     }
 }
 
@@ -191,9 +203,10 @@ void Heating_Put_SetPoint(HeatingChannel Channel, int_least16_t Value) {
   */
 void Heating_Put_WindowContact(HeatingChannel Channel, bool State) {
     hHeating[Channel].WindowContact = State;
-    if (State) {
-        hHeating[Channel].BlockingTime_WindowContact = 0;
-    } else {
+
+    /* Window is open, the blocking time will be reset to its default value every function call,
+     * so the heating doesn't switch on. The window is now closed, the timer is counting down. */
+    if (State == true) {
         hHeating[Channel].BlockingTime_WindowContact = BLOCKING_TIME_WINDOW;
     }
 }
@@ -231,7 +244,7 @@ void Heating_Timer(HeatingTimerDataTypeDef *pTimerData, uint_fast8_t Size) {
     }
 }
 
-bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData) {
+static bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData) {
     if ( (pTimerData->Minute == TimerMinutes) && (
             (pTimerData->Weekdays & TimerDays) ||
             (pTimerData->Weekdays == AllDays) ) ) {
@@ -247,7 +260,7 @@ bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData) {
   * @retval true = change timer minutes succesful
   *         false = change timer minute failed
   */
-bool SetTimerMinutes(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek) {
+bool Heating_SetTimer(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek) {
     /* Check input data */
     if (Minutes > 1440) {
         return false;
