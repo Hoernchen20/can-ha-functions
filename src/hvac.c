@@ -31,8 +31,7 @@
 /**                                                                  **/
 /**********************************************************************/
 /* Includes ----------------------------------------------------------*/
-#include "../inc/hvac.h"
-#include <stdint.h>
+#include "hvac.h"
 
 /* Private typedef ---------------------------------------------------*/
 /* Private define ----------------------------------------------------*/
@@ -52,35 +51,66 @@
 /**                                                                  **/
 /**********************************************************************/
 /* Private typedef ---------------------------------------------------*/
+struct {
+    /* Input */
+    int_least16_t   ActualValue; /** fix point 10,00°C = 1000) */
+    int_least16_t   SetPoint;    /** fix point 10,00°C = 1000) */
+    int_least16_t   CalculateSetPoint;
+    bool            WindowContact; /** false = window is closed */
+
+    /* Output */
+    bool            Heating;
+    bool            ActualValue_IsOld;     // true = is old
+    bool            Heating_FreezingLevel; /* Heating dispite the window
+                                            * is open and the temprature
+                                            * is unter the freezing
+                                            * level */
+
+
+    /* Config */
+
+    /* Private */
+    uint_least16_t  Lifetime_ActualValue;
+    uint_least16_t  BlockingTime_WindowContact;
+} hHeating[NumberHeatingChannels];
+
 /* Private define ----------------------------------------------------*/
 /* Private macro -----------------------------------------------------*/
 /* Private variables -------------------------------------------------*/
-uint32_t Timestamp_OldHandling;
-int16_t OutsideTemperature;
-Heating_HandleTypeDef hHeating[NUM_HEATING_CHANNELS];
+int16_t OutsideTemperature = 1000;
+static uint_least16_t TimerMinutes;
+static WeekdayTypeDef TimerDays;
 
 /* Private function prototypes ---------------------------------------*/
-static void Heating_Function(Heating_HandleTypeDef *hhtd);
+static void Heating_Function(HeatingChannel Channel);
+static bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData);
+static void Heating_ManipulateSetPoint(HeatingChannel Channel);
+static void Heating_DecreaseLifetime_ActualValue(HeatingChannel Channel);
 
 /* Private functions -------------------------------------------------*/
+void Heating_Init(void) {
+    for(uint_fast8_t i = 0; i < NumberHeatingChannels; i++) {
+        hHeating[i].ActualValue = CH1_STD_ACTUALVALUE;
+        hHeating[i].SetPoint = CH1_STD_SETPOINT;
+        hHeating[i].CalculateSetPoint = CH1_STD_CALCULATESETPOINT;
+        hHeating[i].WindowContact = false;
+        hHeating[i].Heating = false;
+        hHeating[i].ActualValue_IsOld = false;
+        hHeating[i].Heating_FreezingLevel = false;
+        hHeating[i].Lifetime_ActualValue = LIFETIME_ACTUAL_VALUE;
+        hHeating[i].BlockingTime_WindowContact = 0;
+    }
+}
+
 /**
-  * @brief  Handles all heating channels.
+  * @brief  Handles all heating channels. Should start every second.
   * @param  None
   * @retval None
   */
 void Heating_Handler(void) {
-    uint32_t tmp_time = RTC_GetUnixTime();
-    
-    /* Work only every second */
-    if (tmp_time > Timestamp_OldHandling ) {
-        
-        /* Work off every channel */
-        for ( uint_fast8_t i = 0; i < NUM_HEATING_CHANNELS; i++) {
-            Heating_Function(&hHeating[i]);
-        }
-        
-        /* Save old working time */
-        Timestamp_OldHandling = tmp_time;
+    /* Work off every channel */
+    for ( uint_fast8_t i = 0; i < NumberHeatingChannels; i++) {
+        Heating_Function(i);
     }
 }
 
@@ -90,47 +120,55 @@ void Heating_Handler(void) {
   *               channel.
   * @retval None
   */
-static void Heating_Function(Heating_HandleTypeDef *hhtd) {
-    bool HeatingState;
+static void Heating_Function(HeatingChannel Channel) {
+    Heating_ManipulateSetPoint(Channel);
+    Heating_DecreaseLifetime_ActualValue(Channel);
     
-    /* Manipulate set point with outside temperature */
-    if (OutsideTemperature > 1000) {
-        hhtd->CalculateSetPoint = (int_least16_t)(
-            hhtd->SetPoint - (OutsideTemperature - 1000) / 4); /* check if division with shift right is smaller */
+    if (hHeating[Channel].BlockingTime_WindowContact > 0) {
+        hHeating[Channel].BlockingTime_WindowContact--;
+        hHeating[Channel].Heating = false;
+        hHeating[Channel].Heating_FreezingLevel = false;
     } else {
-        hhtd->CalculateSetPoint = hhtd->SetPoint;
-    }
-    
-    /* Decrease time values and check blocking time of window contact */
-    if (hhtd->Lifetime_ActualValue > 0) {
-        hhtd->Lifetime_ActualValue--;
-    }
-    
-    if (hhtd->BlockingTime_WindowContact > 0) {
-        hhtd->BlockingTime_WindowContact--;
-        HeatingState = FALSE;
-    } else {
-        if (hhtd->WindowContact) {
+        if (hHeating[Channel].WindowContact) {
             /* check if temperature is under freezing level then heat */
-            if (hhtd->ActualValue < FREEZING_LEVEL) {
-                HeatingState = TRUE;
-                hhtd->Heating_FreezingLevel = TRUE;
-            } else {
-                HeatingState = FALSE;
-                hhtd->Heating_FreezingLevel = FALSE;
+            if (hHeating[Channel].ActualValue < FREEZING_LEVEL) {
+                hHeating[Channel].Heating = true;
+                hHeating[Channel].Heating_FreezingLevel = true;
+            }
+            if (hHeating[Channel].ActualValue > FREEZING_LEVEL + HYSTERESE){
+                hHeating[Channel].Heating = false;
+                hHeating[Channel].Heating_FreezingLevel = false;
             }
         } else {
             /* heat if temperature is to low */
-            if (hhtd->ActualValue < (hhtd->CalculateSetPoint - HYSTERESE)) {
-                HeatingState = TRUE;
-            } else {
-                HeatingState = FALSE;
+            if (hHeating[Channel].ActualValue < (hHeating[Channel].CalculateSetPoint - HYSTERESE)) {
+                hHeating[Channel].Heating = true;
+            }
+            if (hHeating[Channel].ActualValue > (hHeating[Channel].CalculateSetPoint + HYSTERESE)){
+                hHeating[Channel].Heating = false;
             }
         }
     }
-    
-    /* Save temporary state */
-    hhtd->Heating = HeatingState;
+}
+
+static void Heating_ManipulateSetPoint(HeatingChannel Channel) {
+    /* Manipulate set point with outside temperature */
+    if (OutsideTemperature > 1000) {
+        hHeating[Channel].CalculateSetPoint =
+                (int_least16_t) (hHeating[Channel].SetPoint
+                        - (OutsideTemperature - 1000) / 4); /* check if division with shift right is smaller */
+    } else {
+        hHeating[Channel].CalculateSetPoint = hHeating[Channel].SetPoint;
+    }
+}
+
+static void Heating_DecreaseLifetime_ActualValue(HeatingChannel Channel) {
+    if (hHeating[Channel].Lifetime_ActualValue > 0) {
+        hHeating[Channel].Lifetime_ActualValue--;
+        hHeating[Channel].ActualValue_IsOld = false;
+    } else {
+        hHeating[Channel].ActualValue_IsOld = true;
+    }
 }
 
 /**
@@ -140,9 +178,9 @@ static void Heating_Function(Heating_HandleTypeDef *hhtd) {
   * @param  Value: Actual value (fix point 10,00°C = 1000).
   * @retval None
   */
-void Heating_Put_ActualValue(Heating_HandleTypeDef *hhtd, int_least16_t Value) {
-    hhtd->ActualValue = Value;
-    hhtd->Lifetime_ActualValue = LIFETIME_MEASURED_VALUE;
+void Heating_Put_ActualValue(HeatingChannel Channel, int_least16_t Value) {
+    hHeating[Channel].ActualValue = Value;
+    hHeating[Channel].Lifetime_ActualValue = LIFETIME_ACTUAL_VALUE;
 }
 
 /**
@@ -152,23 +190,123 @@ void Heating_Put_ActualValue(Heating_HandleTypeDef *hhtd, int_least16_t Value) {
   * @param  Value: Setpoint (fix point 10,00°C = 1000).
   * @retval None
   */
-void Heating_Put_SetPoint(Heating_HandleTypeDef *hhtd, int_least16_t Value) {
-    hhtd->SetPoint = Value;
+void Heating_Put_SetPoint(HeatingChannel Channel, int_least16_t Value) {
+    hHeating[Channel].SetPoint = Value;
 }
 
 /**
   * @brief  Set or unset the window contact in heating struct.
   * @param  hhtd: Pointer to the handle struct of the specific heating 
   *               channel.
-  * @param  State: State of window contact (FALSE = window is closed).
+  * @param  State: State of window contact (false = window is closed).
   * @retval None
   */
-void Heating_Put_WindowContact(Heating_HandleTypeDef *hhtd, bool State) {
-    hhtd->WindowContact = State;
-    if (State) {
-        hhtd->BlockingTime_WindowContact = 0;
+void Heating_Put_WindowContact(HeatingChannel Channel, bool State) {
+    hHeating[Channel].WindowContact = State;
+
+    /* Window is open, the blocking time will be reset to its default value every function call,
+     * so the heating doesn't switch on. The window is now closed, the timer is counting down. */
+    if (State == true) {
+        hHeating[Channel].BlockingTime_WindowContact = BLOCKING_TIME_WINDOW;
+    }
+}
+
+int_least16_t Heating_GetCalculateSetPoint(HeatingChannel Channel) {
+    return hHeating[Channel].CalculateSetPoint;
+}
+
+bool Heating_GetHeatingState(HeatingChannel Channel) {
+    return hHeating[Channel].Heating;
+}
+
+bool Heating_IsActualValueOld(HeatingChannel Channel) {
+    return hHeating[Channel].ActualValue_IsOld;
+}
+
+bool Heating_GetWindowContact(HeatingChannel Channel) {
+    return hHeating[Channel].WindowContact;
+}
+
+bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel) {
+    return hHeating[Channel].Heating_FreezingLevel;
+}
+
+/**
+  * @brief  Handles Timer.
+  * @param  None
+  * @retval None
+  */
+void Heating_Timer(HeatingTimerDataTypeDef *pTimerData, uint_fast8_t Size) {
+    for (uint_fast8_t i = 0; i < Size; i++) {
+        if ( Heating_TimerMatch(&pTimerData[i]) ) {
+            Heating_Put_SetPoint(pTimerData[i].Channel, pTimerData[i].SetPoint);
+        }
+    }
+}
+
+static bool Heating_TimerMatch(HeatingTimerDataTypeDef *pTimerData) {
+    if ( (pTimerData->Minute == TimerMinutes) && (
+            (pTimerData->Weekdays & TimerDays) ||
+            (pTimerData->Weekdays == AllDays) ) ) {
+        return true;
     } else {
-        hhtd->BlockingTime_WindowContact = BLOCKING_TIME_WINDOW;
+        return false;
+    }
+}
+
+/**
+  * @brief  Set global minute variable to actual time.
+  * @param  Minutes: Actual time in minutes.
+  * @retval true = change timer minutes succesful
+  *         false = change timer minute failed
+  */
+bool Heating_SetTimer(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek) {
+    /* Check input data */
+    if (Minutes > 1440) {
+        return false;
+    } else {
+        TimerMinutes = Minutes;
+        TimerDays = DayOfWeek;
+        return true;
+    }
+}
+
+/**
+  * @brief  Increas timer value. Should start every second.
+  * @param  None
+  * @retval None
+  */
+void Heating_IncTimer(void) {
+    static uint_least8_t seconds = 0;
+    seconds++;
+
+    if (seconds >= 60) {
+        seconds = 0;
+
+        TimerMinutes++;
+        if (TimerMinutes >= 1440) {
+            TimerMinutes = 0;
+
+            /* next day */
+            switch(TimerDays) {
+                case Sunday:    TimerDays = Monday;
+                                break;
+                case Monday:    TimerDays = Tuesday;
+                                break;
+                case Tuesday:   TimerDays = Wednesday;
+                                break;
+                case Wednesday: TimerDays = Thursday;
+                                break;
+                case Thursday:  TimerDays = Friday;
+                                break;
+                case Friday:    TimerDays = Saturday;
+                                break;
+                case Saturday:  TimerDays = Sunday;
+                                break;
+                case AllDays:   TimerDays = Sunday;
+                                break;
+            }
+        }
     }
 }
 

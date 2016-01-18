@@ -35,15 +35,12 @@
 /**                                                                  **/
 /**********************************************************************/
 /* Includes ----------------------------------------------------------*/
-#include "rtc.h"
+#include <stdint.h>
+#include <stdbool.h>
+
 /* Exported constants ------------------------------------------------*/
 /* Exported variables ------------------------------------------------*/
 /* Exported types ----------------------------------------------------*/
-#ifndef BOOL
-#define BOOL
-typedef enum { FALSE, TRUE }bool;
-#endif
-
 /* Exported macro ----------------------------------------------------*/
 /* Exported functions ------------------------------------------------*/
 
@@ -54,45 +51,63 @@ typedef enum { FALSE, TRUE }bool;
 /**********************************************************************/
 /* Includes ----------------------------------------------------------*/
 /* Exported constants ------------------------------------------------*/
-#define NUM_HEATING_CHANNELS    1
-#define LIFETIME_MEASURED_VALUE 300   /** in seconds */
+#define LIFETIME_ACTUAL_VALUE   300   /** in seconds */
 #define BLOCKING_TIME_WINDOW    300   /** in seconds */
-#define HYSTERESE               20    /** fix point 10,00°C = 1000) */
-#define FREEZING_LEVEL          1000  /** fix point 10,00°C = 1000) */
+#define HYSTERESE               10    /** fix point 10,00°C = 1000) */
+#define FREEZING_LEVEL          1500  /** fix point 10,00°C = 1000) */
+
+/* Channel 1 */
+#define CH1_STD_ACTUALVALUE         2000
+#define CH1_STD_SETPOINT            2000
+#define CH1_STD_CALCULATESETPOINT   1500
 
 /* Exported types ----------------------------------------------------*/
+typedef enum {
+    Channel1,
+
+    /* Don't remove this */
+    NumberHeatingChannels
+}HeatingChannel;
+
+typedef enum {
+    Sunday    = (1<<0),
+    Monday    = (1<<1),
+    Tuesday   = (1<<2),
+    Wednesday = (1<<3),
+    Thursday  = (1<<4),
+    Friday    = (1<<5),
+    Saturday  = (1<<6),
+    AllDays   = (0b01111111)
+}WeekdayTypeDef;
+
 typedef struct {
-    /* Input */
-    int_least16_t   ActualValue; /** fix point 10,00°C = 1000) */
-    int_least16_t   SetPoint;    /** fix point 10,00°C = 1000) */
-    bool            WindowContact; /** FALSE = window is closed */
-
-    /* Output */
-    bool            Heating;
-    bool            ActualValue_IsOld;
-    bool            Heating_FreezingLevel; /* Heating dispite the window
-                                            * is open and the temprature
-                                            * is unter the freezing
-                                            * level */
-    int_least16_t   CalculateSetPoint;
-
-    /* Config */
-    
-    /* Private */
-    uint_least16_t  Lifetime_ActualValue;
-    uint_least16_t  BlockingTime_WindowContact;
-} Heating_HandleTypeDef;
+    uint_least16_t Minute;
+    WeekdayTypeDef Weekdays;
+    HeatingChannel Channel;
+    int_least16_t  SetPoint;
+} HeatingTimerDataTypeDef;
 
 /* Exported variables ------------------------------------------------*/
 extern int16_t OutsideTemperature;
-extern Heating_HandleTypeDef hHeating[NUM_HEATING_CHANNELS];
 
 /* Exported macro ----------------------------------------------------*/
+#define CALC_MINUTES(h, m) h * 60 + m
+
 /* Exported functions ------------------------------------------------*/
+void Heating_Init(void);
 void Heating_Handler(void);
-void Heating_Put_ActualValue(Heating_HandleTypeDef *hhtd, int_least16_t Value);
-void Heating_Put_SetPoint(Heating_HandleTypeDef *hhtd, int_least16_t Value);
-void Heating_Put_WindowContact(Heating_HandleTypeDef *hhtd, bool State);
+void Heating_Put_ActualValue(HeatingChannel Channel, int_least16_t Value);
+void Heating_Put_SetPoint(HeatingChannel Channel, int_least16_t Value);
+void Heating_Put_WindowContact(HeatingChannel Channel, bool State);
+int_least16_t Heating_GetCalculateSetPoint(HeatingChannel Channel);
+bool Heating_GetHeatingState(HeatingChannel Channel);
+bool Heating_IsActualValueOld(HeatingChannel Channel);
+bool Heating_GetWindowContact(HeatingChannel Channel);
+bool Heating_GetHeating_FreezingLevel(HeatingChannel Channel);
+
+void Heating_Timer(HeatingTimerDataTypeDef *pTimerData, uint_fast8_t Size);
+bool Heating_SetTimer(uint_least16_t Minutes, WeekdayTypeDef DayOfWeek);
+void Heating_IncTimer(void);
 
 /**********************************************************************/
 /**                                                                  **/
