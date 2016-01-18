@@ -53,8 +53,8 @@
 /* Exported constants ------------------------------------------------*/
 #define LIFETIME_ACTUAL_VALUE   300   /** in seconds */
 #define BLOCKING_TIME_WINDOW    300   /** in seconds */
-#define HYSTERESE               15    /** fix point 10,00°C = 1000) */
-#define FREEZING_LEVEL          1000  /** fix point 10,00°C = 1000) */
+#define HYSTERESE               10    /** fix point 10,00°C = 1000) */
+#define FREEZING_LEVEL          1500  /** fix point 10,00°C = 1000) */
 
 /* Channel 1 */
 #define CH1_STD_ACTUALVALUE         2000
